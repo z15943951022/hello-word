@@ -1,8 +1,10 @@
 package com.szz.hello.controller;
 
 import com.szz.hello.common.DynamicSwitch;
-import com.szz.hello.service.MyService;
+import com.szz.hello.service.TestService;
+import org.apache.tomcat.util.digester.SetPropertiesRule;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,16 +13,14 @@ import org.springframework.web.bind.annotation.RestController;
  * @author szz
  */
 @RestController
-public class HelloWord extends DynamicSwitch {
+public class TestController extends DynamicSwitch {
 
     @Autowired
-    private MyService service;
+    private TestService testService;
 
-
-
-    @GetMapping("/hello")
-    public ResponseEntity hello() {
-        return ResponseEntity.ok().body(service.getMessage());
+    @GetMapping("/test")
+    public ResponseEntity test() {
+        return ResponseEntity.ok().body(testService.bus());
     }
 
 }
