@@ -1,7 +1,5 @@
 package com.szz.hello.common;
 
-import org.springframework.stereotype.Component;
-
 import java.lang.annotation.*;
 
 /**
@@ -10,9 +8,8 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Component
-public @interface LocalBusGroup {
+@Inherited
+public @interface SelectorLabel {
 
-    Class<?> switchClass();
-
+    String value() default "default";
 }

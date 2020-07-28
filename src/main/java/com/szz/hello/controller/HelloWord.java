@@ -1,6 +1,6 @@
 package com.szz.hello.controller;
 
-import com.szz.hello.common.DynamicSwitch;
+import com.szz.hello.common.DynamicSwitchable;
 import com.szz.hello.service.MyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -11,12 +11,10 @@ import org.springframework.web.bind.annotation.RestController;
  * @author szz
  */
 @RestController
-public class HelloWord extends DynamicSwitch {
+public class HelloWord extends DynamicSwitchable {
 
     @Autowired
     private MyService service;
-
-
 
     @GetMapping("/hello")
     public ResponseEntity hello() {

@@ -5,7 +5,18 @@ package com.szz.hello.common;
  */
 public enum  BusFlag {
 
+    /**
+     * Feign对接 状态
+     */
     FeignBusGroup,
 
-    LocalBusGroup;
+    /**
+     * 本地原逻辑 状态
+     */
+    LocalBusGroup,
+
+    /**
+     * 混合 状态
+     */
+    MixedBusGroup;
 }

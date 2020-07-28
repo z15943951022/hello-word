@@ -24,4 +24,21 @@ public class MController {
         }
         return ResponseEntity.ok().body(true);
     }
+
+    @GetMapping("/label")
+    public ResponseEntity switchRemote(boolean flag,String label) {
+        if (flag){
+            swtichController.switchLocalALLBeanByLabel(label);
+        }else {
+            swtichController.switchRemoteALLBeanByLabel(label);
+
+        }
+        return ResponseEntity.ok().body(true);
+    }
+
+    @GetMapping("/print")
+    public ResponseEntity switchRemote() {
+        return ResponseEntity.ok().body(swtichController.printAllStatus());
+    }
+
 }
