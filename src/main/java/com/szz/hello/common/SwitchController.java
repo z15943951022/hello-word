@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -18,52 +19,53 @@ public class SwitchController {
     /**
      * 观察对象集合
      */
-    private static final List<DynamicSwitchable> dynamicSwitches = new CopyOnWriteArrayList<>();
+    private static final List<SwitchBean> DYNAMIC_SWITCH_BEANS = new CopyOnWriteArrayList<>();
 
     /**
      * 标签对象集合
      */
-    private static final Map<String,List<DynamicSwitchable>> labelContainer = new ConcurrentHashMap<>();
+    private static final Map<String, List<SwitchBean>> labelContainer = new ConcurrentHashMap<>();
 
 
-    public static void setDynamicSwitches(DynamicSwitchable dynamicSwitch) {
-        dynamicSwitches.add(dynamicSwitch);
-        List<Field> interfaceBusFields = dynamicSwitch.getInterfaceBusFields();
-        if (null != interfaceBusFields && interfaceBusFields.size() > 0){
-            addLabel(interfaceBusFields,dynamicSwitch);
+    public static void setDynamicSwitchBeans(SwitchBean switchBean) {
+        DYNAMIC_SWITCH_BEANS.add(switchBean);
+        List<Field> interfaceBusFields = switchBean.getInterfaceBusFields();
+        if (null != interfaceBusFields && interfaceBusFields.size() > 0) {
+            addLabel(interfaceBusFields, switchBean);
         }
     }
 
     /**
      * 虽然IOC初始化的过程是同步的，但还是加个锁心里舒服一点
+     *
      * @param fields
-     * @param dynamicSwitchable
+     * @param switchBean
      */
-    private static void addLabel(List<Field> fields,DynamicSwitchable dynamicSwitchable){
+    private static void addLabel(List<Field> fields, SwitchBean switchBean) {
         for (Field field : fields) {
             SelectorLabel selectorLabel;
             if (field == null || (selectorLabel = field.getType().getAnnotation(SelectorLabel.class)) == null) return;
-            List<DynamicSwitchable> dynamicSwitchables;
-            if ((dynamicSwitchables = labelContainer.get(selectorLabel.value())) != null){
-                dynamicSwitchables.add(dynamicSwitchable);
+            List<SwitchBean> switchBeans;
+            if ((switchBeans = labelContainer.get(selectorLabel.value())) != null) {
+                switchBeans.add(switchBean);
             } else {
-                synchronized (labelContainer){
-                    if ((dynamicSwitchables = labelContainer.get(selectorLabel.value()))  == null){
-                        List<DynamicSwitchable> list = new CopyOnWriteArrayList<>();
-                        list.add(dynamicSwitchable);
-                        labelContainer.put(selectorLabel.value(),list);
-                    }else {
-                        dynamicSwitchables.add(dynamicSwitchable);
+                synchronized (labelContainer) {
+                    if ((switchBeans = labelContainer.get(selectorLabel.value())) == null) {
+                        List<SwitchBean> list = new CopyOnWriteArrayList<>();
+                        list.add(switchBean);
+                        labelContainer.put(selectorLabel.value(), list);
+                    } else {
+                        switchBeans.add(switchBean);
                     }
                 }
             }
         }
     }
 
-    public void switchRemoteALLBean(){
-        for (DynamicSwitchable dynamicSwitch : dynamicSwitches) {
+    public void switchRemoteALLBean() {
+        for (SwitchBean switchBean : DYNAMIC_SWITCH_BEANS) {
             try {
-                dynamicSwitch.switchoverRemoteBean();
+                switchBean.switchoverRemoteBean();
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
@@ -71,10 +73,10 @@ public class SwitchController {
     }
 
 
-    public void switchLocalALLBean(){
-        for (DynamicSwitchable dynamicSwitch : dynamicSwitches) {
+    public void switchLocalALLBean() {
+        for (SwitchBean switchBean : DYNAMIC_SWITCH_BEANS) {
             try {
-                dynamicSwitch.switchoverLocalBean();
+                switchBean.switchoverLocalBean();
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
@@ -82,37 +84,65 @@ public class SwitchController {
     }
 
 
-    public void switchRemoteALLBeanByLabel(String label){
-        List<DynamicSwitchable> dynamicSwitchables = labelContainer.get(label);
-        if (dynamicSwitchables == null || dynamicSwitchables.size() == 0) return;
-        for (DynamicSwitchable dynamicSwitchable : dynamicSwitchables) {
+    public void switchRemoteALLBeanByLabel(String label) {
+        List<SwitchBean> switchBeans = labelContainer.get(label);
+        if (switchBeans == null || switchBeans.size() == 0) return;
+        for (SwitchBean switchBean : switchBeans) {
             try {
-                dynamicSwitchable.switchoverRemoteBeanByLabel(label);
+                switchBean.switchoverRemoteBeanByLabel(label);
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    public void switchLocalALLBeanByLabel(String label){
-        List<DynamicSwitchable> dynamicSwitchables = labelContainer.get(label);
-        if (dynamicSwitchables == null || dynamicSwitchables.size() == 0) return;
-        for (DynamicSwitchable dynamicSwitchable : dynamicSwitchables) {
+    public void switchLocalALLBeanByLabel(String label) {
+        List<SwitchBean> switchBeans = labelContainer.get(label);
+        if (switchBeans == null || switchBeans.size() == 0) return;
+        for (SwitchBean switchBean : switchBeans) {
             try {
-                dynamicSwitchable.switchoverLocalBeanByLabel(label);
+                switchBean.switchoverLocalBeanByLabel(label);
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    public List<ObjectStatusVo> printAllStatus(){
-        List<ObjectStatusVo> map = new ArrayList<>();
-        for (DynamicSwitchable dynamicSwitch : dynamicSwitches) {
-            ObjectStatusVo objectStatusVo = new ObjectStatusVo();
-            objectStatusVo.setClassName(dynamicSwitch.getClass().getName());
-            objectStatusVo.setStatus(dynamicSwitch.getFlag());
+    public List<ObjectStatusVo> printAllStatus() {
+        List<ObjectStatusVo> list = new ArrayList<>();
+        for (SwitchBean switchBean : DYNAMIC_SWITCH_BEANS) {
+            ObjectStatusVo info = null;
+            try {
+                info = switchBean.getInfo();
+                list.add(info);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
         }
-        return map;
+        return list;
     }
+
+
+    /**
+     * 定位切换
+     * @param className 类名
+     * @param fieldName 字段名
+     * @param flag true是切local  false切feign
+     */
+    public void targetSwitch(String className, String fieldName, boolean flag) {
+        for (SwitchBean dynamicSwitchBean : DYNAMIC_SWITCH_BEANS) {
+            if (Objects.equals(className, dynamicSwitchBean.getClass().getName())) {
+                try {
+                    if (flag) {
+                        dynamicSwitchBean.targetSwitchLocal(fieldName);
+                    } else {
+                        dynamicSwitchBean.targetSwitchRemote(fieldName);
+                    }
+                } catch (NoSuchFieldException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
 }

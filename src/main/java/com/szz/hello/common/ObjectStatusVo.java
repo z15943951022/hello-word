@@ -9,7 +9,7 @@ public class ObjectStatusVo {
 
     private String className;
 
-    private BusFlag status;
+    private BusStatus status;
 
     private List<SubField> subField;
 
@@ -30,28 +30,28 @@ public class ObjectStatusVo {
         this.className = className;
     }
 
-    public BusFlag getStatus() {
+    public BusStatus getStatus() {
         return status;
     }
 
-    public void setStatus(BusFlag status) {
+    public void setStatus(BusStatus status) {
         this.status = status;
     }
 
     static class SubField {
 
-        private String className;
+        private String fieldName;
 
         private String label;
 
-        private BusFlag status;
+        private BusStatus status;
 
-        public String getClassName() {
-            return className;
+        public String getFieldName() {
+            return fieldName;
         }
 
-        public void setClassName(String className) {
-            this.className = className;
+        public void setFieldName(String fieldName) {
+            this.fieldName = fieldName;
         }
 
         public String getLabel() {
@@ -62,11 +62,11 @@ public class ObjectStatusVo {
             this.label = label;
         }
 
-        public BusFlag getStatus() {
+        public BusStatus getStatus() {
             return status;
         }
 
-        public void setStatus(BusFlag status) {
+        public void setStatus(BusStatus status) {
             this.status = status;
         }
     }

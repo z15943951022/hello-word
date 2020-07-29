@@ -3,20 +3,26 @@ package com.szz.hello.common;
 /**
  * @author szz
  */
-public enum  BusFlag {
+public enum BusStatus {
 
     /**
      * Feign对接 状态
      */
-    FeignBusGroup,
+    FeignBus,
 
     /**
      * 本地原逻辑 状态
      */
-    LocalBusGroup,
+    LocalBus,
 
     /**
      * 混合 状态
      */
-    MixedBusGroup;
+    MixedBus,
+
+
+    /**
+     * 混合 状态
+     */
+    OtherBus;
 }

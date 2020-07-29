@@ -1,57 +1,44 @@
 package com.szz.hello.common;
 
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
+import com.sun.org.apache.bcel.internal.generic.IF_ACMPEQ;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 /**
  * @author szz
  */
-public class DynamicSwitchable implements ApplicationContextAware {
-
-
-    private BusFlag flag = BusFlag.FeignBusGroup;
+public class DynamicSwitchable implements SwitchBean {
 
     /**
      * 只读
      */
-    private static final Map<String, Object> beansWithFeignBusGroup = new HashMap<>();
+    private static final Map<String, Object> beansWithFeignBusGroup = BusIOC.beansWithFeignBusGroup;
 
     /**
      * 只读
      */
-    private static final Map<String, Object> beansWithLocalBusGroup = new HashMap<>();
+    private static final Map<String, Object> beansWithLocalBusGroup = BusIOC.beansWithLocalBusGroup;
 
 
-    private List<Field> fields;
+    /**
+     * 带标签得域
+     */
+    private List<Field> labelFields;
+
+    /**
+     * 所有可切换得域
+     */
+    private List<Field> usableFields;
 
 
     public DynamicSwitchable() {
-        SwitchController.setDynamicSwitches(this);
-        fields = getInterfaceBusFields();
-    }
-
-
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        Map<String, Object> FeignBusGroupMap = applicationContext.getBeansWithAnnotation(RemoteBusGroup.class);
-        Map<String, Object> LocalBusGroupMap = applicationContext.getBeansWithAnnotation(LocalBusGroup.class);
-        if (null != FeignBusGroupMap){
-            for (Object value : FeignBusGroupMap.values()) {
-                beansWithFeignBusGroup.put(value.getClass().getName(),value);
-            }
-        }
-        if (null != LocalBusGroupMap){
-            for (Object value : LocalBusGroupMap.values()) {
-                beansWithLocalBusGroup.put(value.getClass().getName(),value);
-            }
-        }
+        SwitchController.setDynamicSwitchBeans(this);
+        labelFields = getInterfaceBusFields();
     }
 
 
@@ -60,10 +47,8 @@ public class DynamicSwitchable implements ApplicationContextAware {
      * @throws IllegalAccessException
      */
     public void switchoverLocalBean() throws IllegalAccessException {
-        Class<? extends DynamicSwitchable> aClass = this.getClass();
-        Field[] declaredFields = aClass.getDeclaredFields();
+        List<Field> declaredFields = getUsableFields();
         for (Field declaredField : declaredFields) {
-            declaredField.setAccessible(true);
             RemoteBusGroup FeignAnnotation;
             if ((FeignAnnotation = declaredField.get(this).getClass().getAnnotation(RemoteBusGroup.class)) != null){
                 Class<?> switchClass = FeignAnnotation.switchClass();
@@ -77,7 +62,6 @@ public class DynamicSwitchable implements ApplicationContextAware {
                 }
             }
         }
-        flag = BusFlag.LocalBusGroup;
     }
 
     /**
@@ -85,10 +69,8 @@ public class DynamicSwitchable implements ApplicationContextAware {
      * @throws IllegalAccessException
      */
     public void switchoverRemoteBean() throws IllegalAccessException {
-        Class<? extends DynamicSwitchable> aClass = this.getClass();
-        Field[] declaredFields = aClass.getDeclaredFields();
+        List<Field> declaredFields = getUsableFields();
         for (Field declaredField : declaredFields) {
-            declaredField.setAccessible(true);
             LocalBusGroup localAnnotation;
             if ((localAnnotation = declaredField.get(this).getClass().getAnnotation(LocalBusGroup.class)) != null){
                 Class<?> switchClass = localAnnotation.switchClass();
@@ -102,7 +84,6 @@ public class DynamicSwitchable implements ApplicationContextAware {
                 }
             }
         }
-        flag = BusFlag.FeignBusGroup;
     }
 
     /**
@@ -110,8 +91,9 @@ public class DynamicSwitchable implements ApplicationContextAware {
      * @throws IllegalAccessException
      */
     public void switchoverRemoteBeanByLabel(String label) throws IllegalAccessException {
-        if (fields == null || fields.size() == 0 || label == null || "".equals(label)) return;
-        for (Field field : fields) {
+        if (labelFields == null || labelFields.size() == 0 || label == null || "".equals(label)) return;
+
+        for (Field field : labelFields) {
             field.setAccessible(true);
             LocalBusGroup localAnnotation;
             if (label.equals(field.getType().getAnnotation(SelectorLabel.class).value()) && (localAnnotation = field.get(this).getClass().getAnnotation(LocalBusGroup.class)) != null){
@@ -126,6 +108,7 @@ public class DynamicSwitchable implements ApplicationContextAware {
                 }
             }
         }
+
     }
 
     /**
@@ -133,8 +116,9 @@ public class DynamicSwitchable implements ApplicationContextAware {
      * @throws IllegalAccessException
      */
     public void switchoverLocalBeanByLabel(String label) throws IllegalAccessException {
-        if (fields == null || fields.size() == 0 || label == null || "".equals(label)) return;
-        for (Field field : fields) {
+        if (labelFields == null || labelFields.size() == 0 || label == null || "".equals(label)) return;
+
+        for (Field field : labelFields) {
             field.setAccessible(true);
             RemoteBusGroup FeignAnnotation;
             if (label.equals(field.getType().getAnnotation(SelectorLabel.class).value()) && (FeignAnnotation = field.get(this).getClass().getAnnotation(RemoteBusGroup.class)) != null){
@@ -151,7 +135,46 @@ public class DynamicSwitchable implements ApplicationContextAware {
         }
     }
 
+    @Override
+    public void targetSwitchLocal(String fieldName) throws NoSuchFieldException {
+        Field field = this.getClass().getDeclaredField(fieldName);
+        if (null != field) {
+            field.setAccessible(true);
+            try {
+                RemoteBusGroup remoteBusGroup = field.get(this).getClass().getAnnotation(RemoteBusGroup.class);
+                Object obj;
+                if (remoteBusGroup != null && (obj = beansWithLocalBusGroup.get(remoteBusGroup.switchClass().getName())) != null){
+                    field.set(this,obj);
+                }
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
+    @Override
+    public void targetSwitchRemote(String fieldName) throws NoSuchFieldException {
+        Field field = this.getClass().getDeclaredField(fieldName);
+        if (null != field) {
+            field.setAccessible(true);
+            try {
+                LocalBusGroup localBusGroup = field.get(this).getClass().getAnnotation(LocalBusGroup.class);
+                Object obj;
+                if (localBusGroup != null && (obj = beansWithLocalBusGroup.get(localBusGroup.switchClass().getName())) != null){
+                    field.set(this,obj);
+                }
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+    /**
+     * 获取所有带标签的域
+     * @return
+     */
+    @Override
     public List<Field> getInterfaceBusFields() {
         List<Field> fields = new ArrayList<>();
         Class<? extends DynamicSwitchable> aClass = this.getClass();
@@ -164,14 +187,77 @@ public class DynamicSwitchable implements ApplicationContextAware {
         return fields;
     }
 
-
     private SelectorLabel getFieldLabel(Field field) {
         SelectorLabel selectorLabel = field.getType().getAnnotation(SelectorLabel.class);
         return selectorLabel;
     }
 
+    @Override
+    public ObjectStatusVo getInfo() throws IllegalAccessException {
+        ObjectStatusVo objectStatusVo = new ObjectStatusVo();
+        AtomicBoolean localFlag = new AtomicBoolean(false);
+        AtomicBoolean remoteFlag = new AtomicBoolean(false);
 
-    public BusFlag getFlag() {
-        return flag;
+        List<Field> allFields = getUsableFields();
+        usableFields = allFields.size() > 0 ? allFields : null;
+        if (usableFields != null) {
+            List<ObjectStatusVo.SubField> collect = usableFields.stream().map(f -> {
+                f.setAccessible(true);
+                SelectorLabel selectorLabel = f.getType().getAnnotation(SelectorLabel.class);
+                BusStatus status = BusStatus.OtherBus;
+                try {
+                    LocalBusGroup localBusGroup = f.get(this).getClass().getAnnotation(LocalBusGroup.class);
+                    RemoteBusGroup remoteBusGroup = f.get(this).getClass().getAnnotation(RemoteBusGroup.class);
+                    if (localBusGroup != null) {
+                        status = BusStatus.LocalBus;
+                        localFlag.set(true);
+                    } else if (remoteBusGroup != null) {
+                        status = BusStatus.FeignBus;
+                        remoteFlag.set(true);
+                    }
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+                ObjectStatusVo.SubField subField = new ObjectStatusVo.SubField();
+                subField.setFieldName(f.getName());
+                subField.setLabel(selectorLabel != null ? selectorLabel.value() : null);
+                subField.setStatus(status);
+                return subField;
+            }).collect(Collectors.toList());
+
+            objectStatusVo.setSubField(collect);
+            objectStatusVo.setClassName(this.getClass().getName());
+            if (localFlag.get() && remoteFlag.get()){
+                objectStatusVo.setStatus(BusStatus.MixedBus);
+            }else if (localFlag.get() && !remoteFlag.get()){
+                objectStatusVo.setStatus(BusStatus.LocalBus);
+            }else if (!localFlag.get() && remoteFlag.get()){
+                objectStatusVo.setStatus(BusStatus.FeignBus);
+            }
+        }
+        return objectStatusVo;
     }
+
+
+    private List<Field> getUsableFields() throws IllegalAccessException {
+        if (usableFields != null) return usableFields;
+        List<Field> fields = new ArrayList<>();
+
+        Class<? extends DynamicSwitchable> aClass = this.getClass();
+        Field[] declaredFields = aClass.getDeclaredFields();
+        for (Field declaredField : declaredFields) {
+            declaredField.setAccessible(true);
+            if (declaredField.get(this).getClass().getAnnotation(LocalBusGroup.class) != null
+                    || declaredField.get(this).getClass().getAnnotation(RemoteBusGroup.class) != null
+                    || getFieldLabel(declaredField) != null){
+                fields.add(declaredField);
+            }
+        }
+        usableFields = fields;
+        return usableFields;
+    }
+
+
+
+
 }

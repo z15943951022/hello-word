@@ -16,7 +16,7 @@ public class MController {
     private SwitchController swtichController;
 
     @GetMapping("/switch")
-    public ResponseEntity swtichLocal(boolean flag) {
+    public ResponseEntity switchLocal(boolean flag) {
         if (flag){
             swtichController.switchLocalALLBean();
         }else {
@@ -31,7 +31,6 @@ public class MController {
             swtichController.switchLocalALLBeanByLabel(label);
         }else {
             swtichController.switchRemoteALLBeanByLabel(label);
-
         }
         return ResponseEntity.ok().body(true);
     }
@@ -39,6 +38,12 @@ public class MController {
     @GetMapping("/print")
     public ResponseEntity switchRemote() {
         return ResponseEntity.ok().body(swtichController.printAllStatus());
+    }
+
+    @GetMapping("/a")
+    public ResponseEntity a(String className,String FieldName) {
+        swtichController.targetSwitch(className,FieldName,true);
+        return ResponseEntity.ok().body(true);
     }
 
 }
