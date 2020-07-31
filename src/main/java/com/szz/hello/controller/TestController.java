@@ -1,5 +1,6 @@
 package com.szz.hello.controller;
 
+import com.szz.hello.client.TestClient;
 import com.szz.hello.common.DynamicSwitchable;
 import com.szz.hello.service.TestService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ public class TestController extends DynamicSwitchable {
 
     @Autowired
     private TestService testService;
+
 
     @GetMapping("/test")
     public ResponseEntity test() {

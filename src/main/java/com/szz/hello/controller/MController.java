@@ -1,6 +1,8 @@
 package com.szz.hello.controller;
 
+import com.szz.hello.client.TestClient;
 import com.szz.hello.common.SwitchController;
+import org.apache.tomcat.util.digester.SetPropertiesRule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +16,9 @@ public class MController {
 
     @Autowired
     private SwitchController swtichController;
+
+    @Autowired
+    private TestClient testClient;
 
     @GetMapping("/switch")
     public ResponseEntity switchLocal(boolean flag) {
@@ -43,6 +48,12 @@ public class MController {
     @GetMapping("/a")
     public ResponseEntity a(String className,String FieldName) {
         swtichController.targetSwitch(className,FieldName,true);
+        return ResponseEntity.ok().body(true);
+    }
+
+    @GetMapping("/b")
+    public ResponseEntity b() {
+        testClient.test();
         return ResponseEntity.ok().body(true);
     }
 

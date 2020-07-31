@@ -1,7 +1,5 @@
 package com.szz.hello.common;
 
-import com.sun.org.apache.bcel.internal.generic.IF_ACMPEQ;
-
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,12 +15,12 @@ public class DynamicSwitchable implements SwitchBean {
     /**
      * 只读
      */
-    private static final Map<String, Object> beansWithFeignBusGroup = BusIOC.beansWithFeignBusGroup;
+    private static final Map<String, Object> beansWithFeignBusGroup = BusContainer.beansWithFeignBusGroup;
 
     /**
      * 只读
      */
-    private static final Map<String, Object> beansWithLocalBusGroup = BusIOC.beansWithLocalBusGroup;
+    private static final Map<String, Object> beansWithLocalBusGroup = BusContainer.beansWithLocalBusGroup;
 
 
     /**
@@ -193,7 +191,7 @@ public class DynamicSwitchable implements SwitchBean {
     }
 
     @Override
-    public ObjectStatusVo getInfo() throws IllegalAccessException {
+    public ObjectStatusVo getInfo() {
         ObjectStatusVo objectStatusVo = new ObjectStatusVo();
         AtomicBoolean localFlag = new AtomicBoolean(false);
         AtomicBoolean remoteFlag = new AtomicBoolean(false);
@@ -238,20 +236,90 @@ public class DynamicSwitchable implements SwitchBean {
         return objectStatusVo;
     }
 
+    @Override
+    public void targetSwitchLocalByRefCN(String refClassName)  {
+        List<Field> usableFields = getUsableFields();
+        for (Field usableField : usableFields) {
+            try {
+                if (getSinkFieldsByClassName(usableField.get(this),refClassName)){
+                    try {
+                        this.targetSwitchLocal(usableField.getName());
+                    } catch (NoSuchFieldException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
 
-    private List<Field> getUsableFields() throws IllegalAccessException {
+    }
+
+    @Override
+    public void targetSwitchRemoteByRefCN(String refClassName){
+        List<Field> usableFields = getUsableFields();
+        for (Field usableField : usableFields) {
+            if (getSinkFieldsByClassName(usableField.getType(),refClassName)){
+                try {
+                    this.targetSwitchRemote(usableField.getName());
+                } catch (NoSuchFieldException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+
+    /**
+     * 根搜索目标className
+     * @param object 根对象
+     * @param refClassName 目标class
+     * @return
+     */
+    private boolean getSinkFieldsByClassName(Object object,String refClassName) {
+        if (object.getClass().getTypeName().equals(refClassName)){
+            return true;
+        }
+        Field[] fields = object.getClass().getDeclaredFields();
+        for (Field field : fields) {
+            field.setAccessible(true);
+            Object sinkObj = null;
+            try {
+                sinkObj = field.get(object);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+            if(sinkObj == null && sinkObj.getClass() == String.class) continue;
+            if (getSinkFieldsByClassName(sinkObj,refClassName)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    /**
+     * 查询当前对象受控制范围的域
+     * @return
+     * @throws IllegalAccessException
+     */
+    private List<Field> getUsableFields() {
         if (usableFields != null) return usableFields;
         List<Field> fields = new ArrayList<>();
 
         Class<? extends DynamicSwitchable> aClass = this.getClass();
         Field[] declaredFields = aClass.getDeclaredFields();
-        for (Field declaredField : declaredFields) {
-            declaredField.setAccessible(true);
-            if (declaredField.get(this).getClass().getAnnotation(LocalBusGroup.class) != null
-                    || declaredField.get(this).getClass().getAnnotation(RemoteBusGroup.class) != null
-                    || getFieldLabel(declaredField) != null){
-                fields.add(declaredField);
+        try {
+            for (Field declaredField : declaredFields) {
+                declaredField.setAccessible(true);
+                if (declaredField.get(this).getClass().getAnnotation(LocalBusGroup.class) != null
+                        || declaredField.get(this).getClass().getAnnotation(RemoteBusGroup.class) != null
+                        || getFieldLabel(declaredField) != null){
+                    fields.add(declaredField);
+                }
             }
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
         }
         usableFields = fields;
         return usableFields;

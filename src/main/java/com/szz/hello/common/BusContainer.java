@@ -12,7 +12,7 @@ import java.util.Map;
  * @author szz
  */
 @Component
-public class BusIOC implements ApplicationContextAware {
+public class BusContainer implements ApplicationContextAware {
 
     /**
      * 只读

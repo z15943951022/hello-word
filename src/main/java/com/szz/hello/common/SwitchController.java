@@ -145,4 +145,20 @@ public class SwitchController {
         }
     }
 
+    /**
+     * 寻找引用这个类名得对象中得引用并切换指定至local或者remote
+     * @param refClassName
+     */
+    public void targetSwitch(String refClassName,boolean flag){
+        for (SwitchBean dynamicSwitchBean : DYNAMIC_SWITCH_BEANS) {
+            if (flag){
+                try {
+                    dynamicSwitchBean.targetSwitchLocalByRefCN(refClassName);
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
 }

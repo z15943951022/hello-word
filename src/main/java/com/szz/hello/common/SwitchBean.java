@@ -59,4 +59,22 @@ public interface SwitchBean {
      * @return
      */
     ObjectStatusVo getInfo() throws IllegalAccessException;
+
+
+    /**
+     * 寻找引用这个类名得对象中得引用并切换指定至local
+     * @param refClassName
+     */
+    void targetSwitchLocalByRefCN(String refClassName) throws IllegalAccessException;
+
+
+
+    /**
+     * 寻找引用这个类名得对象中得引用并切换指定至remote
+     * @param refClassName
+     */
+    void targetSwitchRemoteByRefCN(String refClassName) throws IllegalAccessException;
+
+
+
 }
