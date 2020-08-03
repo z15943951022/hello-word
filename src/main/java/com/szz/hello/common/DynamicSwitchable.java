@@ -1,5 +1,6 @@
 package com.szz.hello.common;
 
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -158,7 +159,7 @@ public class DynamicSwitchable implements SwitchBean {
             try {
                 LocalBusGroup localBusGroup = field.get(this).getClass().getAnnotation(LocalBusGroup.class);
                 Object obj;
-                if (localBusGroup != null && (obj = beansWithLocalBusGroup.get(localBusGroup.switchClass().getName())) != null){
+                if (localBusGroup != null && (obj = beansWithFeignBusGroup.get(localBusGroup.switchClass().getName())) != null){
                     field.set(this,obj);
                 }
             } catch (IllegalAccessException e) {
@@ -241,7 +242,7 @@ public class DynamicSwitchable implements SwitchBean {
         List<Field> usableFields = getUsableFields();
         for (Field usableField : usableFields) {
             try {
-                if (getSinkFieldsByClassName(usableField.get(this),refClassName)){
+                if (getFieldsByClassName(usableField.get(this),refClassName)){
                     try {
                         this.targetSwitchLocal(usableField.getName());
                     } catch (NoSuchFieldException e) {
@@ -259,7 +260,7 @@ public class DynamicSwitchable implements SwitchBean {
     public void targetSwitchRemoteByRefCN(String refClassName){
         List<Field> usableFields = getUsableFields();
         for (Field usableField : usableFields) {
-            if (getSinkFieldsByClassName(usableField.getType(),refClassName)){
+            if (getFieldsByClassName(usableField.getType(),refClassName)){
                 try {
                     this.targetSwitchRemote(usableField.getName());
                 } catch (NoSuchFieldException e) {
@@ -276,9 +277,12 @@ public class DynamicSwitchable implements SwitchBean {
      * @param refClassName 目标class
      * @return
      */
-    private boolean getSinkFieldsByClassName(Object object,String refClassName) {
-        if (object.getClass().getTypeName().equals(refClassName)){
-            return true;
+    private boolean getFieldsByClassName(Object object,String refClassName) {
+        Class<?>[] interfaces = object.getClass().getInterfaces();
+        for (Class<?> anInterface : interfaces) {
+            if (anInterface.getTypeName().equals(refClassName)){
+                return true;
+            }
         }
         Field[] fields = object.getClass().getDeclaredFields();
         for (Field field : fields) {
@@ -286,15 +290,42 @@ public class DynamicSwitchable implements SwitchBean {
             Object sinkObj = null;
             try {
                 sinkObj = field.get(object);
+                Class<?>[] sinkInterfaces = sinkObj.getClass().getInterfaces();
+                for (Class<?> anInterface : sinkInterfaces) {
+                    if (anInterface.getTypeName().equals(refClassName)){
+                        return true;
+                    }
+                }
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
-            if(sinkObj == null && sinkObj.getClass() == String.class) continue;
-            if (getSinkFieldsByClassName(sinkObj,refClassName)){
+            if(sinkObj == null || sinkObj.getClass() == object.getClass() || ignoreFieldClassType(sinkObj.getClass())) continue;
+            // 递归太深无法使用
+            /*if (getFieldsByClassName(sinkObj,refClassName)){
                 return true;
-            }
+            }*/
         }
         return false;
+    }
+
+    private boolean ignoreFieldClassType(Class fieldType){
+        return fieldType == String.class
+                || fieldType == Integer.class
+                || fieldType == Long.class
+                || fieldType == Double.class
+                || fieldType == Float.class
+                || fieldType == Byte.class
+                || fieldType == Character.class
+                || fieldType == Short.class
+                || fieldType == Boolean.class
+                || fieldType == byte.class
+                || fieldType == short.class
+                || fieldType == int.class
+                || fieldType == long.class
+                || fieldType == float.class
+                || fieldType == double.class
+                || fieldType == char.class
+                || fieldType == boolean.class;
     }
 
 
